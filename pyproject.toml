@@ -1,0 +1,7 @@
+# Type-checking config only (this repo is not packaged).
+# Run: mypy   (from the repo root, in an env with mypy)
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["cosmic_seq", "scripts"]
+explicit_package_bases = true

@@ -1,0 +1,10 @@
+name: env_cosmic
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - numpy
+  - ncbi-datasets-cli   # scripts/01, only when genomes are missing
+  - unzip
+  - wget

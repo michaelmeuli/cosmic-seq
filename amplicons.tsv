@@ -1,0 +1,60 @@
+amplicon	target	scope	forward	reverse	documented_bp	use	sequenced_with	protocol
+16S_Mbak283f_Mbak264r	16S rRNA gene (rrs), 5' part	genus Mycobacterium	Mbak283f	Mbak264r		routine (protocol 3; also 32.43522)	Mbak14, possibly Mbak259r	32.43304
+16S_Mbak283f_Mbak259r	16S rRNA gene (rrs), 5' part	genus Mycobacterium	Mbak283f	Mbak259r		reamplification (protocol 4)	Mbak14, possibly Mbak259r	32.43304
+16S_IMMF_IMMR2	16S rRNA gene (rrs), 5' part	genus Mycobacterium, direct detection	IMM F	IMM R2		routine (LC480 direct detection)	genus-positive products are sequenced according to 32.43103	32.43325
+16S_Bact1098s_Bact1525a	16S rRNA gene (rrs), 3' end	bacteria (broad range)	Bact-1098s	Bact-1525a		routine	amplification primers	32.43506
+rpoB_2573f_3337r	rpoB	NTM	rpoB-2573f	rpoB-3337r	764	routine	forward primer	32.43504
+hsp65_TB11_TB12w	hsp65 (groEL2)	NTM	TB-11	TB-12w	439	routine	amplification primers	32.43505
+hsp65_TB11_TB12	hsp65 (groEL2)	NTM	TB-11	TB-12	439	fallback if TB-12w gives no product	amplification primers	32.43505
+ITS_1f_2r	16S-23S ITS	NTM (M. fortuitum group)	16-23S-ITS-1f	16-23S-ITS-2r	210	routine	amplification primers	32.43606
+23S_MCLR19F_MCLR21R	23S rRNA gene (rrl), clarithromycin	NTM	MCLR 19 F	MCLR 21R	836	routine (816 bp in E. coli, 836 bp in M. abscessus)	amplification primers	32.43605
+erm41_f2_r2	erm(41)	NTM (M. abscessus / M. chelonae)	erm41f2	erm41r2	673	routine	forward and reverse primer	32.43622
+erm41_f_r	erm(41)	NTM (M. abscessus / M. chelonae)	erm41f	erm41r	451	alternative, after consultation	forward and reverse primer	32.43622
+embB_1f_1r	embB, ethambutol	Mtb complex	embB-1f_mod2	embB-1r	678	routine	forward primers	32.43603
+embB_2f_2r	embB, ethambutol	Mtb complex	embB-2f	embB-2r	523	routine	forward primers	32.43603
+23S_SP1F_SP2Rmod	23S rRNA gene (rrl), clarithromycin / linezolid	genus Mycobacterium	SP1 F	SP2 R mod	728	routine	amplification primers	32.43604
+ethA_f1_r1	ethA, ethionamide	Mtb complex	ethAf1_mod	ethAr1_mod	839	routine	forward and reverse primers	32.43607
+ethA_f2_r2	ethA, ethionamide	Mtb complex	ethAf2_mod	ethAr2_mod	834	routine	forward and reverse primers	32.43607
+ethR_F02_R07	ethR, ethionamide	Mtb complex	F02	R07	1067	routine	amplification primers	32.43608
+inhAprom_for_rev	inhA promoter (fabG1 upstream) and inhA gene, isoniazid	Mtb complex	inhAprom-for	inhAprom-rev	451	routine (promoter)	amplification primers	32.43609
+inhA_for_rev	inhA promoter (fabG1 upstream) and inhA gene, isoniazid	Mtb complex	inhA-for	inhA-rev	1044	routine (whole gene)	amplification primers	32.43609
+katG_core	katG, isoniazid	Mtb complex	katG_core_for	katG_core_rev	697	routine	amplification primers	32.43610
+gyrA_174f1_72r2	gyrA, fluoroquinolones	Mtb complex	gyrA 174-f1	gyrA 72-r2	1095	routine	amplification primers	32.43611
+rpoB_TR1_TR2b	rpoB 81-bp core region, rifampicin	Mtb complex	TR1	TR2b	411	routine	amplification primers	32.43612
+rpoB_Tb176f_Tb176r	rpoB 5' region, rifampicin	Mtb complex	Tb176-f	Tb176-r	365	routine	amplification primers	32.43619
+rrs_289_261	16S rRNA gene (rrs) 3' end, amikacin / capreomycin	genus Mycobacterium	#289	#261	212	routine	amplification primers	32.43613
+thyA_F1_R1	thyA, PAS	Mtb complex	thyAF1	thyAR1	1117	routine	forward and reverse primer, thyAI1 in addition	32.43614
+rpsL_S13_S16	rpsL, streptomycin	Mtb complex	S13	S16	504	routine	amplification primers	32.43615
+pncA_Ber	pncA, pyrazinamide	Mtb complex	pncA-Ber-fw	pncA-Ber-rv	823	routine	forward primer, reverse after consultation	32.43616
+rplC_5_3	rplC, linezolid	Mtb complex	rplC_5`	rplC_3`	419	routine	forward and reverse primer	32.43617
+atpE_F_R	atpE, bedaquiline	Mtb complex	atpE Forward	atpE Reverse	244	routine	forward and reverse primer	32.43618
+Rv0678_F4_R1	Rv0678 (mmpR5), bedaquiline / clofazimine	Mtb complex	Rv0678-F4	Rv0678-R1	560	routine	forward and reverse primer	32.43620
+Rv0678_F1_R2	Rv0678 (mmpR5), bedaquiline / clofazimine	Mtb complex	Rv0678-F1	Rv0678-R2		alternative primers (pairing not written in the protocol)	forward and reverse primer	32.43620
+Rv0678_F2_R2	Rv0678 (mmpR5), bedaquiline / clofazimine	Mtb complex	Rv0678-F2	Rv0678-R2		alternative primers (pairing not written in the protocol)	forward and reverse primer	32.43620
+tlyA_F3_R3	tlyA, capreomycin	Mtb complex	tlyAF3	tlyAR3	981	routine	amplification primers	32.43621
+tlyA_1f_1r	tlyA, capreomycin	Mtb complex	Mtb_tlyA-1f	Mtb_tlyA-1r		alternative primers	amplification primers	32.43621
+tlyA_1fmod_1r	tlyA, capreomycin	Mtb complex	Mtb_tlyA-1f-mod	Mtb_tlyA-1r		alternative primers	amplification primers	32.43621
+tlyA_2f_2r	tlyA, capreomycin	Mtb complex	Mtb_tlyA-2f	Mtb_tlyA-2r		alternative primers	amplification primers	32.43621
+tlyA_2fmod_2rmod	tlyA, capreomycin	Mtb complex	Mtb_tlyA-2f-mod	Mtb_tlyA-2r-mod		alternative primers	amplification primers	32.43621
+ddn_Rv3547_F_R	ddn (Rv3547), delamanid	Mtb complex	Rv3547_F	Rv3547_R		research protocol	forward primer, possibly reverse	NZM 1
+eisprom_F_R	eis promoter, kanamycin	Mtb complex	eispromtbF	eispromtbR	567	research protocol	amplification primers	NZM 2
+eis_F_R	eis, kanamycin	Mtb complex	eistbF	eistbR	1368	research protocol	amplification primers, eistbseq in addition	NZM 2
+gyrA_Pri8_Pri9	gyrA (QRDR)	genus Mycobacterium	Pri8	Pri9		research protocol (file "3-Mycobacterium gyrA" names Pri 8 as forward and Pri 9 as reverse primer)	forward primer, possibly reverse	NZM 3
+gyrA_Pri8_Pri10	gyrA (QRDR)	genus Mycobacterium	Pri8	Pri10		research protocol (pairing not written: Pri10 binds on the same side as Pri9 on H37Rv)	forward primer, possibly reverse	NZM 3
+panD_F_R	panD, pyrazinamide	Mtb complex	panD_F	panD_R	663	research protocol	amplification primers	NZM 5
+gidB_5_3	gidB (gid), streptomycin	Mtb complex	gidB 5	gidB 3	886	research protocol	amplification primers	NZM 14
+gyrA_Mchim	gyrA	M. chimaera	gyrA-Mchim fw	gyrA-Mchim rev	522	research protocol	amplification primers	NZM 15
+gyrA_Mabs	gyrA	M. abscessus	mabs-gyrA f1	mabs-gyrA r1	822	research protocol	forward or reverse primer	NZM 16
+erm39_CME1Y_CME2	erm(38) / erm(39) / erm(40)	M. fortuitum group	CME-1Y	CME-2	175	research protocol	forward or reverse primer	NZM 18
+rpoB_Xpert_F1_R	rpoB (Xpert MTB/RIF region), rifampicin	Mtb complex	rpoB-F1	rpoB-R	192	research protocol (Xpert phase 1)	rpoB-F2 and rpoB-R	NZM 21
+rpoB_Xpert_F2_R2	rpoB (Xpert MTB/RIF region), rifampicin	Mtb complex	rpoB-F2	rpoB-R2	146	research protocol (Xpert phase 2)	rpoB-F2 and rpoB-R	NZM 21
+rpoB_Xpert_F2_R	rpoB (Xpert MTB/RIF region), rifampicin	Mtb complex	rpoB-F2	rpoB-R	164	research protocol (main Xpert product, sequenced)	rpoB-F2 and rpoB-R	NZM 21
+embB_151_131	embB, ethambutol (alternative)	genus Mycobacterium	emb 151	emb 131		research protocol (marked not finished)	emb 151, possibly emb 131	NZM 28
+rpsA_1	rpsA, pyrazinamide	Mtb complex	rspA-1F	rspA-1R	408	research protocol	amplification primers	NZM 29
+rpsA_2	rpsA, pyrazinamide	Mtb complex	rspA-2F	rspA-2R	464	research protocol	amplification primers	NZM 29
+rpsA_3	rpsA, pyrazinamide	Mtb complex	rspA-3F	rspA-3R	536	research protocol	amplification primers	NZM 29
+rpsA_4	rpsA, pyrazinamide	Mtb complex	rspA-4F	rspA-4R	241	research protocol	amplification primers	NZM 29
+rpsA_M5	rpsA, pyrazinamide	Mtb complex	rspA-M5F	rspA-M5R	163	research protocol	amplification primers	NZM 29
+folC_F1_R1	folC, PAS	Mtb complex	folCF1	folCR1	887	research protocol	amplification primers	NZM 30
+folC_F2_R2	folC, PAS	Mtb complex	folCF2	folCR2	1039	research protocol	amplification primers	NZM 30
+erm41prom_for_rev	erm(41) promoter region	M. abscessus	ermpromfor	ermpromrev	400	research protocol	amplification primers	NZM erm41 promoter

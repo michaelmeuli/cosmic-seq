@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Reference sequences of the Sanger amplicons: in-silico PCR of every primer pair on the GTDB species representatives.
 
-Input: `primers.tsv` / `amplicons.tsv` (checked by 02), the representative list of 01 and the genomes in the shared
-NCBI dataset directory. For each genome and primer pair every product with at most --max-mismatches substitutions
+Input: `primers.tsv` / `amplicons.tsv` (checked by 02), the representative list of 01, the curated
+`extra_genomes.tsv` (taxa GTDB merges into another species; the label is used as species) and the genomes in the
+shared NCBI dataset directory. For each genome and primer pair every product with at most --max-mismatches substitutions
 per primer and at most --max-product bp is found; of these the products with the fewest mismatches are kept
 (copies of rRNA operons tie; weaker products are paralogs or unrelated loci). Sequences run from the forward
 primer to the reverse primer, primers included.
@@ -21,7 +22,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import subprocess
 import sys
@@ -30,52 +30,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: the cosmic_seq package
 
-from cosmic_seq import AMPLICONS_TSV, OUTPUT_REFERENCES, PRIMERS_TSV, REPO, REPRESENTATIVES_TSV  # noqa: E402
+from cosmic_seq import (AMPLICONS_TSV, EXTRA_GENOMES_TSV, METADATA_TSV, OUTPUT_REFERENCES, PRIMERS_TSV, REPO,  # noqa: E402
+                        REPRESENTATIVES_TSV)
+from cosmic_seq.genomes import load_genomes, load_metadata  # noqa: E402
 from cosmic_seq.insilico import MAX_MISMATCHES, MAX_PRODUCT  # noqa: E402
 from cosmic_seq.kansasii_paths import MANIFEST_SCRIPT, NCBI_DATASET  # noqa: E402
-from cosmic_seq.tables import Amplicon, Primer, genome_fasta, genome_products, load_amplicons, load_primers  # noqa: E402
+from cosmic_seq.tables import (Amplicon, Primer, Record, genome_fasta, genome_products, load_amplicons,  # noqa: E402
+                               load_cache, load_primers, product_records, settings_key)
 
-Record = dict[str, "str | int"]  # one distinct product sequence of a genome
 MYCOBACTERIUM = "Mycobacterium"
 
 
 def run_genome(accession: str, fasta: str, primers: dict[str, Primer], amplicons: dict[str, Amplicon],
                max_mismatches: int, max_product: int) -> tuple[str, list[Record]]:
     """Distinct best products of one genome; identical copies are merged and counted."""
-    records: list[Record] = []
-    for name, found in genome_products(Path(fasta), primers, amplicons, max_mismatches, max_product).items():
-        merged: dict[str, Record] = {}
-        for product in sorted(found, key=lambda p: (p.contig, p.start)):
-            if product.sequence in merged:
-                merged[product.sequence]["copies"] = int(merged[product.sequence]["copies"]) + 1
-                continue
-            merged[product.sequence] = {
-                "amplicon": name, "length": product.length, "mismatches_forward": product.mismatches_forward,
-                "mismatches_reverse": product.mismatches_reverse, "copies": 1, "contig": product.contig,
-                "start": product.start + 1, "end": product.end, "strand": product.strand, "sequence": product.sequence}
-        records += list(merged.values())
-    return accession, records
-
-
-def settings_key(primers: dict[str, Primer], amplicons: dict[str, Amplicon], max_mismatches: int, max_product: int) -> str:
-    """Changes whenever a primer sequence, a pairing or a search limit changes: cached genomes are then redone."""
-    text = json.dumps([[a.name, primers[a.forward].sequence, primers[a.reverse].sequence] for a in amplicons.values()]
-                      + [max_mismatches, max_product])
-    return hashlib.sha256(text.encode()).hexdigest()[:12]
-
-
-def load_cache(path: Path, key: str) -> dict[str, list[Record]]:
-    cache: dict[str, list[Record]] = {}
-    if path.is_file():
-        with path.open() as handle:
-            for line in handle:
-                try:
-                    entry = json.loads(line)
-                except json.JSONDecodeError:  # a line cut off by a killed job
-                    continue
-                if entry.get("key") == key:
-                    cache[entry["accession"]] = entry["records"]
-    return cache
+    return accession, product_records(genome_products(Path(fasta), primers, amplicons, max_mismatches, max_product))
 
 
 def main() -> int:
@@ -83,6 +52,9 @@ def main() -> int:
     parser.add_argument("--primers", type=Path, default=PRIMERS_TSV)
     parser.add_argument("--amplicons", type=Path, default=AMPLICONS_TSV)
     parser.add_argument("--representatives", type=Path, default=REPRESENTATIVES_TSV, help="accession, genus, species (01)")
+    parser.add_argument("--extra", type=Path, default=EXTRA_GENOMES_TSV,
+                        help="curated genomes added to the representatives (accession, label, reason); label = species")
+    parser.add_argument("--metadata", type=Path, default=METADATA_TSV, help="GTDB metadata rows of step 01")
     parser.add_argument("--genomes", type=Path, default=NCBI_DATASET, help="directory with <accession>/*_genomic.fna")
     parser.add_argument("--accession", nargs="+", help="only these accessions of the representative list")
     parser.add_argument("--limit", type=int, help="only the first N genomes (test runs)")
@@ -95,12 +67,11 @@ def main() -> int:
 
     primers = load_primers(args.primers)
     amplicons = load_amplicons(args.amplicons, primers)
-    with args.representatives.open(newline="") as handle:
-        genomes = list(csv.DictReader(handle, delimiter="\t"))
+    genomes = [g.as_row() for g in load_genomes(args.representatives, args.extra, load_metadata(args.metadata))]
     if args.accession:
         unknown = sorted(set(args.accession) - {g["accession"] for g in genomes})
         if unknown:
-            parser.error(f"not in {args.representatives.name}: {', '.join(unknown)}")
+            parser.error(f"not in {args.representatives.name} or {args.extra.name}: {', '.join(unknown)}")
         genomes = [g for g in genomes if g["accession"] in set(args.accession)]
     if args.limit:
         genomes = genomes[:args.limit]
@@ -179,7 +150,7 @@ def main() -> int:
         writer.writerows([g["accession"], g["genus"], g["species"]] for g in missing)
 
     subprocess.run(["bash", str(MANIFEST_SCRIPT), str(args.out), str(REPO), "scripts/03_reference_amplicons.py",
-                    str(args.primers), str(args.amplicons), str(args.representatives), str(args.genomes)], check=True)
+                    str(args.primers), str(args.amplicons), str(args.representatives), str(args.extra), str(args.genomes)], check=True)
     print(f"{sum(len(rows) for rows in by_amplicon.values())} reference sequences of {len(amplicons)} amplicons in {fasta_dir}")
     return 0
 

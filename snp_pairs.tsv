@@ -1,0 +1,3 @@
+pair	gene	species_a	species_b	window_amplicon	use	report_species	legacy_a	legacy_b	legacy_positions
+kansasii_gastri	groEL2	Mycobacterium gastri	Mycobacterium kansasii	hsp65_TB11_TB12w	diagnostic	Mycobacterium persicum,Mycobacterium pseudokansasii,Mycobacterium ostraviense,Mycobacterium innocens,Mycobacterium attenuatum	AF547836	AF547849	100,130,148,193,283,304,349,400
+marinum_ulcerans	groEL2	Mycobacterium marinum	Mycobacterium ulcerans		research		AY299134	AY299145	

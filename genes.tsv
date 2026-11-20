@@ -1,0 +1,6 @@
+gene	anchor_amplicons	feature_type	name_pattern	h37rv_locus	paralog_locus
+groEL2	hsp65_TB11_TB12w,hsp65_TB11_TB12	CDS	groE?L|groL|chaperonin|hsp6	Rv0440	Rv3417c
+rpoB	rpoB_2573f_3337r,rpoB_TR1_TR2b,rpoB_Xpert_F2_R2	CDS	rpoB|RNA polymerase.*beta	Rv0667	
+rrs	16S_Mbak283f_Mbak264r,16S_IMMF_IMMR2,16S_Bact1098s_Bact1525a,rrs_289_261	rRNA	16S	Rvnr01	
+rrl	23S_SP1F_SP2Rmod,23S_MCLR19F_MCLR21R	rRNA	23S	Rvnr02	
+erm41	erm41_f2_r2,erm41_f_r	CDS	erm|methyltransferase		

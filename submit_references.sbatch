@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# 03: in-silico PCR of all primer pairs on the GTDB Mycobacteriaceae representatives -> output/cosmic-seq/results/references/
+# 02 -> 05: primer check, in-silico PCR (references/), full-length genes (genes/), diagnostic SNP tables (snps/)
+# on the GTDB Mycobacteriaceae representatives + extra_genomes.tsv -> output/cosmic-seq/results/
 #SBATCH --job-name=cosmic-references
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
-#SBATCH --time=04:00:00
+#SBATCH --time=08:00:00
 #SBATCH --output=/shares/sander.imm.uzh/MM/kansasii/output/cosmic-seq/logs/%x-%j.log
 
 set -euo pipefail
@@ -17,3 +18,5 @@ cd "$REPO"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 python scripts/02_handbook_primers.py          # stops here if a primer is not in its protocol
 python scripts/03_reference_amplicons.py --jobs "${SLURM_CPUS_PER_TASK:-1}" "$@"
+python scripts/04_reference_genes.py --jobs "${SLURM_CPUS_PER_TASK:-1}"
+python scripts/05_snp_pairs.py --jobs "${SLURM_CPUS_PER_TASK:-1}"

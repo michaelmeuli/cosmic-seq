@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.11
   - numpy
+  - biopython          # scripts/04, 05: pairwise alignment
   - ncbi-datasets-cli   # scripts/01, only when genomes are missing
   - unzip
   - wget

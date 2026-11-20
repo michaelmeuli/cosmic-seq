@@ -12,6 +12,9 @@ See README.md. Easy to get wrong:
   text the quote of `5'` is sometimes lost and the sequence starts on the next line.
 - `cosmic_seq/insilico.py` started from `hsp65-refalign/hsp65_refalign/insilico.py` but returns all products and prefilters;
   it is not kept in sync with it.
+- **`genes.tsv`, `extra_genomes.tsv` and `snp_pairs.tsv` are curated too.** Step 04 finds a gene through the product of its
+  anchor amplicon (never by annotation name); step 05 reads the step-04 output, so run 03 -> 04 -> 05 in order.
+- `--accession` runs of 03/04 rewrite the result tables with that subset only: use `--out` in `scratch/` for tests.
 - Direction in `primers.tsv` is the role in the pair (forward / reverse as the protocol names them), not the strand of the gene.
 - The GTDB family Mycobacteriaceae includes Corynebacterium, Nocardia, Rhodococcus etc.; filter on `genus` for mycobacteria.
 - **Environment:** `env_cosmic` (`environment.yml`). Run step 3 through `sbatch submit_references.sbatch`, not on the login node.

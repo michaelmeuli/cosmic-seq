@@ -4,13 +4,14 @@ Reference sequences for the mycobacterial Sanger assays of the lab: the primers 
 (`data/Arbeitshandbücher`) are run in silico on the GTDB species representatives of the family Mycobacteriaceae, and
 each product is kept as a reference for the reads of that assay.
 
-Three steps:
+Four steps:
 
 | Step | Script | Does | Output |
 |---|---|---|---|
 | 1 | `scripts/01_gtdb_mycobacteriaceae_genomes.sh` | GTDB r232 metadata -> all `f__Mycobacteriaceae` accessions -> NCBI `datasets`, **only genomes that are not on disk** | genomes in the shared `data/gtdb_genomes/Mycobacteriaceae/ncbi_dataset/data/`; lists in `output/cosmic-seq/results/gtdb232/` |
 | 2 | `scripts/02_handbook_primers.py` | checks `primers.tsv` against the protocol files, lists other oligos of the mycobacterial protocols, runs every pair on H37Rv | `docs/PRIMERS.md`; `output/cosmic-seq/results/primers/` |
 | 3 | `scripts/03_reference_amplicons.py` | in-silico PCR of every primer pair on every species representative | `output/cosmic-seq/results/references/` (`fasta/<amplicon>.fasta`, `amplicons.tsv`, `coverage.tsv`) |
+| 4 | `scripts/04_ncbi_species_groups.py` | NCBI taxonomy: every species group (complex) of the family and its species, mapped to GTDB species via `ncbi_species_taxid` | `output/cosmic-seq/results/species_groups/` (`species_groups.tsv`, `groups.tsv`, `raw/`) |
 
 ## Primers
 
@@ -49,11 +50,25 @@ are merged (`copies`). The sequence runs from the forward to the reverse primer 
 the primers, not the primer sequence. The mismatches of each record are in the FASTA header and in `amplicons.tsv`;
 filter on them when a strict reference set is needed.
 
+## Species groups
+
+Step 4 asks the NCBI Datasets taxonomy API for every `SPECIES_GROUP` / `SPECIES_SUBGROUP` below Mycobacteriaceae (taxid
+1762; found, not listed by hand) and for the species of each (`filtered_subtree?rank_limits=SPECIES`). In November 2026
+these are the M. tuberculosis complex, the M. avium complex, the M. simiae complex and the M. ulcerans group; NCBI has no
+kansasii, abscessus, fortuitum or terrae complex. NCBI "species" include placeholders (`Mycobacterium sp. ...`, `cf.`,
+quoted isolate names, mostly without assemblies): column `formal` marks the named ones.
+
+Each species is looked up in the GTDB metadata by `ncbi_species_taxid` (`gtdb_genomes`, `gtdb_species` with counts, the
+GTDB representative of each). NCBI groups are NCBI taxonomy: all of the tuberculosis complex is GTDB *M. tuberculosis*,
+the ulcerans group is GTDB *M. marinum*, and several MAC species fall into GTDB *M. avium*. Single genomes filed under a
+wrong NCBI taxon show up as extra GTDB species with count 1. The script needs network (about 5 requests) and runs on the
+login node in about 20 s; `--from-raw` parses the saved answers in `raw/` again.
+
 ## Layout
 
 ```
 cosmic_seq/       handbook.py (text of .docx / .doc), insilico.py (primer search, products), tables.py, kansasii_paths.py (vendored)
-scripts/          01_gtdb_mycobacteriaceae_genomes.sh, 02_handbook_primers.py, 03_reference_amplicons.py
+scripts/          01_gtdb_mycobacteriaceae_genomes.sh, 02_handbook_primers.py, 03_reference_amplicons.py, 04_ncbi_species_groups.py
 primers.tsv  amplicons.tsv   curated tables
 docs/PRIMERS.md   generated
 submit_references.sbatch     steps 2 and 3
@@ -70,6 +85,7 @@ bash scripts/01_gtdb_mycobacteriaceae_genomes.sh [--dry-run]
 python scripts/02_handbook_primers.py
 sbatch submit_references.sbatch              # 02 + 03 on 16 cores; log in output/cosmic-seq/logs/
 python scripts/03_reference_amplicons.py --accession GCF_000195955.2   # one genome, about 20 s
+python scripts/04_ncbi_species_groups.py     # species groups, needs network
 ```
 
 Step 3 keeps finished genomes in `per_genome.jsonl`; a rerun only processes new genomes, and everything is redone when a

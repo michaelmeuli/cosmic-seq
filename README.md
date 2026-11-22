@@ -60,11 +60,17 @@ kansasii, abscessus, fortuitum or terrae complex. NCBI "species" include placeho
 quoted isolate names, mostly without assemblies); they are counted in `groups.tsv` but left out of `species_groups.tsv`.
 
 The curated `species_groups.tsv` of the repo (`group, label, species, note`) adds the groups NCBI lacks (M. kansasii
-complex, M. chelonae / M. abscessus complex, with both *Mycobacterium* and *Mycobacteroides* spellings) and gives each
+complex, M. chelonae-abscessus complex) and gives each
 group its display label; a row without `species` only sets the label of an NCBI group. A curated species that is also in
 an NCBI group stops the script unless its note says `override`.
 
-The output `species_groups.tsv` (`group, label, species, source, group_taxid, species_taxid, ncbi_assemblies`) holds
+Species are written with the genus as GTDB has it: GTDB keeps one genus *Mycobacterium*, while NCBI uses the 2018
+split genera (*Mycobacteroides*, *Mycolicibacterium*, *Mycolicibacter*, *Mycolicibacillus*) and some deflines write
+`[Mycobacterium] chelonae`. `cosmic_seq/names.py` maps these to *Mycobacterium* (curated and NCBI names alike, so a
+species cannot appear twice under two genera); cosmic-files matches hits the same way.
+
+The output `species_groups.tsv` (`group, label, species, source, group_taxid, species_taxid, ncbi_assemblies,
+ncbi_name`; `ncbi_name` is the NCBI spelling where it differs) holds
 one row per formal species and one group per species: a lookup "species name -> group" for cosmic-files, which names a
 16S call by its group because 16S does not separate the members of a complex. GTDB is not used: it has no rank for
 complexes. The script needs network (about 5 requests, about 20 s) and no cluster data, so it also runs on Windows;

@@ -23,7 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: th
 from cosmic_seq import OUTPUT, OUTPUT_COSMIC_FILES, OUTPUT_REFERENCES, OUTPUT_SPECIES_GROUPS  # noqa: E402
 from cosmic_seq.manifest import write_manifest  # noqa: E402
 
-SPECIES_GROUPS_HEADER = ["group", "label", "species", "source", "group_taxid", "species_taxid", "ncbi_assemblies"]
+SPECIES_GROUPS_HEADER = ["group", "label", "species", "source", "group_taxid", "species_taxid", "ncbi_assemblies",
+                         "ncbi_name"]
 
 
 def check_fasta(path: Path) -> int:

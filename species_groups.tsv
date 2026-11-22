@@ -10,21 +10,12 @@ Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium innocens	kansas
 Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium attenuatum	kansasii subtype VI
 Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium ostraviense	kansasii subtype IV
 Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium gastri	16S identical to M. kansasii
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium abscessus	not an NCBI group; NCBI names the genus Mycobacteroides
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides abscessus
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium bolletii	M. abscessus subsp. bolletii
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides bolletii
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium massiliense	M. abscessus subsp. massiliense
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides massiliense
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium chelonae
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides chelonae
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium franklinii
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides franklinii
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium immunogenum
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides immunogenum
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium salmoniphilum
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides salmoniphilum
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium saopaulense
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides saopaulense
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium stephanolepidis
-Mycobacterium abscessus complex	M. chelonae / M. abscessus complex	Mycobacteroides stephanolepidis
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium abscessus	not an NCBI group; NCBI uses the genus Mycobacteroides (matched as synonym)
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium bolletii	M. abscessus subsp. bolletii
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium massiliense	M. abscessus subsp. massiliense
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium chelonae
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium franklinii
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium immunogenum
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium salmoniphilum
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium saopaulense
+Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium stephanolepidis

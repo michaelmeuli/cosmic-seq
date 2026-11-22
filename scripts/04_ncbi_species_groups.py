@@ -4,8 +4,11 @@
 1. NCBI Datasets taxonomy API: every SPECIES_GROUP / SPECIES_SUBGROUP node below the family (found, not listed by hand);
 2. for each group, every node of rank SPECIES below it; placeholders ("Mycobacterium sp. ...", "cf.", quoted isolate
    names) are counted in groups.tsv but left out of species_groups.tsv;
-3. the curated `species_groups.tsv` of the repo adds the groups NCBI lacks (kansasii, abscessus/chelonae) and gives every
-   group its display label. A curated species that is also in an NCBI group is an error unless its note says `override`.
+3. the curated `species_groups.tsv` of the repo adds the groups NCBI lacks (kansasii, chelonae-abscessus) and gives
+   every group its display label. A curated species that is also in an NCBI group is an error unless its note says `override`.
+
+Species are written with the genus as GTDB has it (`cosmic_seq.names.canonical_species`: Mycobacteroides,
+Mycolicibacterium, ... -> Mycobacterium); column `ncbi_name` keeps the NCBI spelling where it differs.
 
 One row per species and one group per species: the table is a lookup "species name -> group" (cosmic-files names a
 16S call by its group, as 16S does not separate the members of a complex). GTDB is not used: it has no rank for
@@ -34,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: th
 
 from cosmic_seq import OUTPUT_SPECIES_GROUPS, SPECIES_GROUPS_TSV  # noqa: E402
 from cosmic_seq.manifest import write_manifest  # noqa: E402
+from cosmic_seq.names import canonical_species  # noqa: E402
 
 MYCOBACTERIACEAE_TAXID = 1762
 API = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon"
@@ -53,6 +57,7 @@ class Member:
     group_taxid: str = ""
     species_taxid: str = ""
     ncbi_assemblies: str = ""
+    ncbi_name: str = ""  # NCBI spelling when it differs from `species`
 
 
 def fetch(url: str) -> dict[str, Any]:
@@ -110,7 +115,7 @@ def read_curated(path: Path) -> tuple[dict[str, str], list[tuple[Member, str]]]:
             if labels.setdefault(group, label) != label:
                 raise ValueError(f"{path}:{line}: group {group!r} has labels {labels[group]!r} and {label!r}")
             if species:
-                members.append((Member(group, label, species, "curated"), row.get("note") or ""))
+                members.append((Member(group, label, canonical_species(species), "curated"), row.get("note") or ""))
     return labels, members
 
 
@@ -150,11 +155,12 @@ def main() -> int:
         species = [(taxid, edge) for taxid, edge in edges.items() if edge.get("rank") == "SPECIES"]
         formal = [(taxid, edge) for taxid, edge in species if is_formal(str(edge["scientific_name"]))]
         for taxid, edge in formal:
-            name = str(edge["scientific_name"])
+            ncbi_name = str(edge["scientific_name"])
+            name = canonical_species(ncbi_name)
             if name in by_species:
                 raise ValueError(f"{name}: in NCBI groups {by_species[name].group!r} and {group_name!r}")
             by_species[name] = Member(group_name, label, name, "ncbi", str(group_taxid), taxid,
-                                      str(edge.get("assembly_count", 0)))
+                                      str(edge.get("assembly_count", 0)), ncbi_name if ncbi_name != name else "")
         n_assembly = sum(bool(edge.get("assembly_count")) for _, edge in formal)
         group_rows.append([group_name, label, "ncbi", group_taxid, len(species), len(formal), n_assembly])
         print(f"{group_name} ({group_taxid}): {len(species)} species, {len(formal)} formal "
@@ -168,9 +174,13 @@ def main() -> int:
     curated_counts: dict[str, int] = {}
     for member, note in curated:
         known = by_species.get(member.species)
-        if known is not None and (known.source == "curated" or "override" not in note):
+        if known is not None and known.source == "curated":
+            raise ValueError(f"{member.species}: listed twice in the curated table (genus synonyms count as one)")
+        if known is not None and "override" not in note:
             raise ValueError(f"{member.species}: curated in {member.group!r} but already in {known.group!r} "
                              f"({known.source}); write `override` in the note to move it")
+        if known is not None:
+            member.ncbi_name = known.ncbi_name
         by_species[member.species] = member
         if member.group not in ncbi_groups:
             curated_counts[member.group] = curated_counts.get(member.group, 0) + 1
@@ -180,8 +190,8 @@ def main() -> int:
 
     rows = sorted(by_species.values(), key=lambda m: (m.group, m.species))
     write_tsv(args.out / "species_groups.tsv",
-              ["group", "label", "species", "source", "group_taxid", "species_taxid", "ncbi_assemblies"],
-              [[m.group, m.label, m.species, m.source, m.group_taxid, m.species_taxid, m.ncbi_assemblies]
+              ["group", "label", "species", "source", "group_taxid", "species_taxid", "ncbi_assemblies", "ncbi_name"],
+              [[m.group, m.label, m.species, m.source, m.group_taxid, m.species_taxid, m.ncbi_assemblies, m.ncbi_name]
                for m in rows])
     write_tsv(args.out / "groups.tsv",
               ["group", "label", "source", "group_taxid", "species", "formal_species", "species_with_assemblies"],

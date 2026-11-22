@@ -15,8 +15,10 @@ See README.md. Easy to get wrong:
 - Direction in `primers.tsv` is the role in the pair (forward / reverse as the protocol names them), not the strand of the gene.
 - The GTDB family Mycobacteriaceae includes Corynebacterium, Nocardia, Rhodococcus etc.; filter on `genus` for mycobacteria.
 - `scripts/04` species groups = **NCBI** species groups + the curated `species_groups.tsv` (kansasii and abscessus/chelonae
-  complexes, display labels). GTDB is not used for groups (no complex rank). One group per species: the output is the
-  species -> group lookup of cosmic-files; a curated species already in an NCBI group needs `override` in its note.
+  complexes, display labels). GTDB is not used for groups (no complex rank). Species use GTDB's genus *Mycobacterium*
+  (`cosmic_seq/names.py` maps Mycobacteroides etc.; keep its synonym list in sync with cosmic-files
+  `MYCOBACTERIUM_SYNONYMS`). One group per species: the output is the species -> group lookup of cosmic-files; a curated
+  species already in an NCBI group needs `override` in its note.
 - **Environment:** `env_cosmic` (`environment.yml`). Run step 3 through `sbatch submit_references.sbatch`, not on the login node.
 - **Type check:** `~/data/conda/envs/env_typecheck/bin/mypy` (strict).
 - **Outputs** go to `output/cosmic-seq/results/` on the shares, not the repo.

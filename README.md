@@ -59,10 +59,18 @@ these are the M. tuberculosis complex, the M. avium complex, the M. simiae compl
 kansasii, abscessus, fortuitum or terrae complex. NCBI "species" include placeholders (`Mycobacterium sp. ...`, `cf.`,
 quoted isolate names, mostly without assemblies); they are counted in `groups.tsv` but left out of `species_groups.tsv`.
 
-The curated `species_groups.tsv` of the repo (`group, label, species, note`) adds the groups NCBI lacks (M. kansasii
-complex, M. chelonae-abscessus complex) and gives each
-group its display label; a row without `species` only sets the label of an NCBI group. A curated species that is also in
-an NCBI group stops the script unless its note says `override`.
+The curated `species_groups.tsv` of the repo (`group, label, species, taxid, note`) gives each group its display label
+and adds what the NCBI groups lack:
+
+- a row with only `group` and `label` sets the label of an NCBI group;
+- a row with a `taxid` makes an NCBI taxon of another rank a group, its species collected like those of a species group
+  (source `ncbi`). The M. chelonae-abscessus complex has no NCBI group node, but it is the NCBI genus *Mycobacteroides*
+  (taxid 670516: abscessus, chelonae, franklinii, immunogenum, salmoniphilum, saopaulense, stephanolepidis,
+  `[Mycobacterium] fukienense`, `[Mycobacterium] runyonii`). The script checks that the NCBI name of the taxid equals
+  `group`;
+- a row with a `species` adds it by hand: the M. kansasii complex (not in NCBI), and *M. bolletii* / *M. massiliense*
+  (NCBI subspecies of abscessus, still species names in old deflines) in group *Mycobacteroides*. A curated species that
+  is also in an NCBI group stops the script unless its note says `override`.
 
 Species are written with the genus as GTDB has it: GTDB keeps one genus *Mycobacterium*, while NCBI uses the 2018
 split genera (*Mycobacteroides*, *Mycolicibacterium*, *Mycolicibacter*, *Mycolicibacillus*) and some deflines write

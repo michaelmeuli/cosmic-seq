@@ -1,21 +1,15 @@
-group	label	species	note
-Mycobacterium avium complex (MAC)	M. avium complex (MAC)		label of the NCBI group
-Mycobacterium simiae complex	M. simiae complex		label of the NCBI group
-Mycobacterium tuberculosis complex	M. tuberculosis complex		label of the NCBI group
-Mycobacterium ulcerans group	M. marinum/ulcerans group		label of the NCBI group; 16S does not separate marinum from ulcerans
-Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium kansasii	not an NCBI group; kansasii subtype I (subtypes II-VI are now species)
-Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium persicum	kansasii subtype II
-Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium pseudokansasii	kansasii subtype III
-Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium innocens	kansasii subtype V
-Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium attenuatum	kansasii subtype VI
-Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium ostraviense	kansasii subtype IV
-Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium gastri	16S identical to M. kansasii
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium abscessus	not an NCBI group; NCBI uses the genus Mycobacteroides (matched as synonym)
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium bolletii	M. abscessus subsp. bolletii
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium massiliense	M. abscessus subsp. massiliense
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium chelonae
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium franklinii
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium immunogenum
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium salmoniphilum
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium saopaulense
-Mycobacterium chelonae-abscessus complex	M. chelonae / M. abscessus complex	Mycobacterium stephanolepidis
+group	label	species	taxid	note
+Mycobacterium avium complex (MAC)	M. avium complex (MAC)			label of the NCBI group
+Mycobacterium simiae complex	M. simiae complex			label of the NCBI group
+Mycobacterium tuberculosis complex	M. tuberculosis complex			label of the NCBI group
+Mycobacterium ulcerans group	M. marinum/ulcerans group			label of the NCBI group; 16S does not separate marinum from ulcerans
+Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium kansasii		not an NCBI group; kansasii subtype I (subtypes II-VI are now species)
+Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium persicum		kansasii subtype II
+Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium pseudokansasii		kansasii subtype III
+Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium innocens		kansasii subtype V
+Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium attenuatum		kansasii subtype VI
+Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium ostraviense		kansasii subtype IV
+Mycobacterium kansasii complex	M. kansasii complex	Mycobacterium gastri		16S identical to M. kansasii
+Mycobacteroides	M. chelonae / M. abscessus complex		670516	NCBI genus Mycobacteroides (Gupta et al. 2018) = M. chelonae-abscessus complex; NCBI has no group node for it
+Mycobacteroides	M. chelonae / M. abscessus complex	Mycobacterium bolletii		M. abscessus subsp. bolletii; still a species name in old deflines
+Mycobacteroides	M. chelonae / M. abscessus complex	Mycobacterium massiliense		M. abscessus subsp. massiliense; still a species name in old deflines

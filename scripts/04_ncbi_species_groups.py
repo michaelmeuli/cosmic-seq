@@ -4,8 +4,12 @@
 1. NCBI Datasets taxonomy API: every SPECIES_GROUP / SPECIES_SUBGROUP node below the family (found, not listed by hand);
 2. for each group, every node of rank SPECIES below it; placeholders ("Mycobacterium sp. ...", "cf.", quoted isolate
    names) are counted in groups.tsv but left out of species_groups.tsv;
-3. the curated `species_groups.tsv` of the repo adds the groups NCBI lacks (kansasii, chelonae-abscessus) and gives
-   every group its display label. A curated species that is also in an NCBI group is an error unless its note says `override`.
+3. NCBI taxa of another rank that serve as a complex, named by a `taxid` row of the curated table (genus
+   Mycobacteroides, 670516 = the M. chelonae-abscessus complex): their species are collected the same way (source
+   ncbi); the node's NCBI name must equal the row's `group`;
+4. the curated `species_groups.tsv` of the repo adds the groups NCBI lacks (kansasii) and synonyms, and gives every
+   group its display label. A curated species that is also in an NCBI group is an error unless its note says
+   `override`.
 
 Species are written with the genus as GTDB has it (`cosmic_seq.names.canonical_species`: Mycobacteroides,
 Mycolicibacterium, ... -> Mycobacterium); column `ncbi_name` keeps the NCBI spelling where it differs.
@@ -103,20 +107,46 @@ def short_label(group: str) -> str:
     return f"{genus[0]}. {rest}" if rest else group
 
 
-def read_curated(path: Path) -> tuple[dict[str, str], list[tuple[Member, str]]]:
-    """Curated table: group -> label, and the curated species with their note."""
+def read_curated(path: Path) -> tuple[dict[str, str], list[tuple[Member, str]], dict[int, str]]:
+    """Curated table: group -> label, the curated species with their note, and taxid -> group of extra NCBI taxa."""
     labels: dict[str, str] = {}
     members: list[tuple[Member, str]] = []
+    extra_taxa: dict[int, str] = {}
     with path.open(newline="", encoding="utf-8") as handle:
         for line, row in enumerate(csv.DictReader(handle, delimiter="\t"), start=2):
             group, label, species = row["group"].strip(), row["label"].strip(), row["species"].strip()
+            taxid = (row.get("taxid") or "").strip()
             if not group or not label:
                 raise ValueError(f"{path}:{line}: group and label are required")
             if labels.setdefault(group, label) != label:
                 raise ValueError(f"{path}:{line}: group {group!r} has labels {labels[group]!r} and {label!r}")
+            if taxid and species:
+                raise ValueError(f"{path}:{line}: a row has either a species or a taxid")
+            if taxid:
+                if int(taxid) in extra_taxa or group in extra_taxa.values():
+                    raise ValueError(f"{path}:{line}: taxid {taxid} / group {group!r} listed twice")
+                extra_taxa[int(taxid)] = group
             if species:
                 members.append((Member(group, label, canonical_species(species), "curated"), row.get("note") or ""))
-    return labels, members
+    return labels, members, extra_taxa
+
+
+def collect_group(group_taxid: int, group_name: str, label: str, edges: Edges,
+                  by_species: dict[str, Member]) -> list[object]:
+    """Add the formal species below an NCBI taxon to `by_species`; returns the groups.tsv row."""
+    species = [(taxid, edge) for taxid, edge in edges.items() if edge.get("rank") == "SPECIES"]
+    formal = [(taxid, edge) for taxid, edge in species if is_formal(str(edge["scientific_name"]))]
+    for taxid, edge in formal:
+        ncbi_name = str(edge["scientific_name"])
+        name = canonical_species(ncbi_name)
+        if name in by_species:
+            raise ValueError(f"{name}: in NCBI groups {by_species[name].group!r} and {group_name!r}")
+        by_species[name] = Member(group_name, label, name, "ncbi", str(group_taxid), taxid,
+                                  str(edge.get("assembly_count", 0)), ncbi_name if ncbi_name != name else "")
+    n_assembly = sum(bool(edge.get("assembly_count")) for _, edge in formal)
+    print(f"{group_name} ({group_taxid}): {len(species)} species, {len(formal)} formal "
+          f"({len(species) - len(formal)} placeholders left out), {n_assembly} with assemblies")
+    return [group_name, label, "ncbi", group_taxid, len(species), len(formal), n_assembly]
 
 
 def write_tsv(path: Path, header: list[str], rows: list[list[object]]) -> None:
@@ -138,7 +168,7 @@ def main() -> int:
 
     raw_dir = args.out / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
-    labels, curated = read_curated(args.curated)
+    labels, curated, extra_taxa = read_curated(args.curated)
 
     family = subtree(args.family_taxid, GROUP_RANKS, raw_dir, args.from_raw)
     groups = sorted(((int(taxid), edge) for taxid, edge in family.items() if edge.get("rank") in GROUP_RANKS),
@@ -152,21 +182,18 @@ def main() -> int:
         group_name = str(group["scientific_name"])
         label = labels.get(group_name) or short_label(group_name)
         edges = subtree(group_taxid, ("SPECIES",), raw_dir, args.from_raw)
-        species = [(taxid, edge) for taxid, edge in edges.items() if edge.get("rank") == "SPECIES"]
-        formal = [(taxid, edge) for taxid, edge in species if is_formal(str(edge["scientific_name"]))]
-        for taxid, edge in formal:
-            ncbi_name = str(edge["scientific_name"])
-            name = canonical_species(ncbi_name)
-            if name in by_species:
-                raise ValueError(f"{name}: in NCBI groups {by_species[name].group!r} and {group_name!r}")
-            by_species[name] = Member(group_name, label, name, "ncbi", str(group_taxid), taxid,
-                                      str(edge.get("assembly_count", 0)), ncbi_name if ncbi_name != name else "")
-        n_assembly = sum(bool(edge.get("assembly_count")) for _, edge in formal)
-        group_rows.append([group_name, label, "ncbi", group_taxid, len(species), len(formal), n_assembly])
-        print(f"{group_name} ({group_taxid}): {len(species)} species, {len(formal)} formal "
-              f"({len(species) - len(formal)} placeholders left out), {n_assembly} with assemblies")
+        group_rows.append(collect_group(group_taxid, group_name, label, edges, by_species))
 
     ncbi_groups = {str(group["scientific_name"]) for _, group in groups}
+    for taxid, group_name in sorted(extra_taxa.items()):
+        if taxid in {group_taxid for group_taxid, _ in groups}:
+            raise ValueError(f"taxid {taxid} ({group_name!r}) is already an NCBI species group; drop its taxid")
+        edges = subtree(taxid, ("SPECIES",), raw_dir, args.from_raw)
+        node_name = str(edges.get(str(taxid), {}).get("scientific_name", ""))
+        if node_name != group_name:
+            raise ValueError(f"taxid {taxid} is {node_name!r} in NCBI, not {group_name!r} as in {args.curated}")
+        group_rows.append(collect_group(taxid, group_name, labels[group_name], edges, by_species))
+        ncbi_groups.add(group_name)
     for group_name in sorted(set(labels) - ncbi_groups - {member.group for member, _ in curated}):
         print(f"warning: curated label for {group_name!r}, which is no NCBI group and has no curated species",
               file=sys.stderr)

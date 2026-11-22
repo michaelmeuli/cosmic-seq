@@ -22,8 +22,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import shutil
-import subprocess
 import sys
 import time
 import urllib.error
@@ -34,8 +32,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: the cosmic_seq package
 
-from cosmic_seq import OUTPUT_SPECIES_GROUPS, REPO, SPECIES_GROUPS_TSV  # noqa: E402
-from cosmic_seq.kansasii_paths import MANIFEST_SCRIPT  # noqa: E402
+from cosmic_seq import OUTPUT_SPECIES_GROUPS, SPECIES_GROUPS_TSV  # noqa: E402
+from cosmic_seq.manifest import write_manifest  # noqa: E402
 
 MYCOBACTERIACEAE_TAXID = 1762
 API = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon"
@@ -125,15 +123,6 @@ def write_tsv(path: Path, header: list[str], rows: list[list[object]]) -> None:
     part.replace(path)
 
 
-def write_manifest(out: Path, *inputs: str) -> None:
-    bash = shutil.which("bash")
-    if bash is None or not MANIFEST_SCRIPT.is_file():
-        print(f"warning: no MANIFEST.txt (bash or {MANIFEST_SCRIPT} missing)", file=sys.stderr)
-        return
-    subprocess.run([bash, str(MANIFEST_SCRIPT), str(out), str(REPO), "scripts/04_ncbi_species_groups.py", *inputs],
-                   check=True)
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--family-taxid", type=int, default=MYCOBACTERIACEAE_TAXID)
@@ -198,7 +187,8 @@ def main() -> int:
               ["group", "label", "source", "group_taxid", "species", "formal_species", "species_with_assemblies"],
               group_rows)
 
-    write_manifest(args.out, str(args.curated), f"{API}/{args.family_taxid}/filtered_subtree")
+    write_manifest(args.out, "scripts/04_ncbi_species_groups.py", str(args.curated),
+                   f"{API}/{args.family_taxid}/filtered_subtree")
     print(f"{len(rows)} species of {len(group_rows)} groups in {args.out}")
     return 0
 

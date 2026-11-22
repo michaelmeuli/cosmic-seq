@@ -4,7 +4,7 @@ Reference sequences for the mycobacterial Sanger assays of the lab: the primers 
 (`data/Arbeitshandbücher`) are run in silico on the GTDB species representatives of the family Mycobacteriaceae, and
 each product is kept as a reference for the reads of that assay.
 
-Four steps:
+Five steps:
 
 | Step | Script | Does | Output |
 |---|---|---|---|
@@ -12,6 +12,7 @@ Four steps:
 | 2 | `scripts/02_handbook_primers.py` | checks `primers.tsv` against the protocol files, lists other oligos of the mycobacterial protocols, runs every pair on H37Rv | `docs/PRIMERS.md`; `output/cosmic-seq/results/primers/` |
 | 3 | `scripts/03_reference_amplicons.py` | in-silico PCR of every primer pair on every species representative | `output/cosmic-seq/results/references/` (`fasta/<amplicon>.fasta`, `amplicons.tsv`, `coverage.tsv`) |
 | 4 | `scripts/04_ncbi_species_groups.py` | species groups (complexes): NCBI taxonomy plus the curated `species_groups.tsv`, one group per species | `output/cosmic-seq/results/species_groups/` (`species_groups.tsv`, `groups.tsv`, `raw/`) |
+| 5 | `scripts/05_export_cosmic_files.py` | bundle for cosmic-files: the amplicon FASTAs of 3 and `species_groups.tsv` of 4 | `output/cosmic-seq/results/cosmic_files/` |
 
 ## Primers
 
@@ -69,14 +70,23 @@ one row per formal species and one group per species: a lookup "species name -> 
 complexes. The script needs network (about 5 requests, about 20 s) and no cluster data, so it also runs on Windows;
 `--from-raw` parses the saved answers in `raw/` again. Without bash or the manifest script it skips `MANIFEST.txt`.
 
+## Export for cosmic-files
+
+cosmic-files embeds the references at compile time from its `res/sequences/references/`. Step 5 writes exactly that
+directory, flat: `<amplicon>.fasta`, `species_groups.tsv`, `MANIFEST.txt`; FASTA files that step 3 no longer writes are
+removed. It checks the FASTA headers and that no species is in two groups. On the desktop, cosmic-files copies the
+bundle with `python scripts/sync_cosmic_seq.py --remote <host>:<results>/cosmic_files` (scp) or `--from <dir>`.
+Step 5 needs no genome data and also runs on Windows (`--results <copy of results>`).
+
 ## Layout
 
 ```
 cosmic_seq/       handbook.py (text of .docx / .doc), insilico.py (primer search, products), tables.py, kansasii_paths.py (vendored)
-scripts/          01_gtdb_mycobacteriaceae_genomes.sh, 02_handbook_primers.py, 03_reference_amplicons.py, 04_ncbi_species_groups.py
+scripts/          01_gtdb_mycobacteriaceae_genomes.sh, 02_handbook_primers.py, 03_reference_amplicons.py, 04_ncbi_species_groups.py,
+                  05_export_cosmic_files.py
 primers.tsv  amplicons.tsv  species_groups.tsv   curated tables
 docs/PRIMERS.md   generated
-submit_references.sbatch     steps 2 and 3
+submit_references.sbatch     steps 2, 3 and 5
 ```
 
 Paths are constants of `kansasii_paths` (`HANDBOOK_DIR`, `NCBI_DATASET`, `OUT_COSMIC`) and flags of the scripts.
@@ -88,9 +98,10 @@ conda env create -f environment.yml          # env_cosmic, once
 conda activate env_cosmic
 bash scripts/01_gtdb_mycobacteriaceae_genomes.sh [--dry-run]
 python scripts/02_handbook_primers.py
-sbatch submit_references.sbatch              # 02 + 03 on 16 cores; log in output/cosmic-seq/logs/
+sbatch submit_references.sbatch              # 02 + 03 + 05 on 16 cores; log in output/cosmic-seq/logs/
 python scripts/03_reference_amplicons.py --accession GCF_000195955.2   # one genome, about 20 s
 python scripts/04_ncbi_species_groups.py     # species groups, needs network
+python scripts/05_export_cosmic_files.py     # bundle for cosmic-files (also run by the sbatch)
 ```
 
 Step 3 keeps finished genomes in `per_genome.jsonl`; a rerun only processes new genomes, and everything is redone when a

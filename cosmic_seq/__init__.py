@@ -6,6 +6,7 @@ from .kansasii_paths import GTDB_RELEASE, OUT_COSMIC
 REPO = Path(__file__).resolve().parent.parent
 PRIMERS_TSV = REPO / "primers.tsv"      # curated: one row per primer
 AMPLICONS_TSV = REPO / "amplicons.tsv"  # curated: one row per primer pair
+SPECIES_GROUPS_TSV = REPO / "species_groups.tsv"  # curated: groups NCBI lacks, display labels of all groups
 PRIMERS_MD = REPO / "docs" / "PRIMERS.md"  # written by scripts/02
 
 OUTPUT = OUT_COSMIC / "results"

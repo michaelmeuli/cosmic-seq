@@ -1,48 +1,60 @@
 #!/usr/bin/env python
-"""Species lists of the NCBI species groups (complexes) of the family Mycobacteriaceae, mapped to GTDB.
+"""Species groups (complexes) of the family Mycobacteriaceae: NCBI taxonomy plus the curated table of the repo.
 
 1. NCBI Datasets taxonomy API: every SPECIES_GROUP / SPECIES_SUBGROUP node below the family (found, not listed by hand);
-2. for each group, every node of rank SPECIES below it (placeholders such as "Mycobacterium sp. ..." included,
-   marked by the column `formal`);
-3. each NCBI species is looked up in the GTDB metadata by `ncbi_species_taxid`: how many genomes of the family carry
-   it, in which GTDB species they are, and the GTDB species representatives of those species.
+2. for each group, every node of rank SPECIES below it; placeholders ("Mycobacterium sp. ...", "cf.", quoted isolate
+   names) are counted in groups.tsv but left out of species_groups.tsv;
+3. the curated `species_groups.tsv` of the repo adds the groups NCBI lacks (kansasii, abscessus/chelonae) and gives every
+   group its display label. A curated species that is also in an NCBI group is an error unless its note says `override`.
 
-NCBI groups are NCBI taxonomy: one GTDB species can hold several NCBI species (all of the M. tuberculosis complex is
-GTDB "Mycobacterium tuberculosis", the M. ulcerans group is GTDB "Mycobacterium marinum"). Genomes filed under a wrong
-NCBI taxon appear as odd GTDB species with small counts; they are shown, not filtered.
+One row per species and one group per species: the table is a lookup "species name -> group" (cosmic-files names a
+16S call by its group, as 16S does not separate the members of a complex). GTDB is not used: it has no rank for
+complexes, and the NCBI groups are NCBI names.
 
-Output directory: species_groups.tsv (one row per group and species), groups.tsv (one row per group),
-raw/<taxid>.json (the API answers; --from-raw parses them again without network), MANIFEST.txt.
+Output directory: species_groups.tsv (one row per species), groups.tsv (one row per group), raw/<taxid>.json (the API
+answers; --from-raw parses them again without network), MANIFEST.txt (skipped where bash or the manifest script is
+missing, e.g. on Windows).
 
-Usage: 04_ncbi_species_groups.py [--family-taxid N] [--metadata FILE] [--out DIR] [--from-raw]
+Usage: 04_ncbi_species_groups.py [--family-taxid N] [--curated FILE] [--out DIR] [--from-raw]
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import json
+import shutil
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
-from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: the cosmic_seq package
 
-from cosmic_seq import OUTPUT_SPECIES_GROUPS, REPO  # noqa: E402
-from cosmic_seq.kansasii_paths import GTDB_METADATA_DIR, GTDB_RELEASE, MANIFEST_SCRIPT  # noqa: E402
+from cosmic_seq import OUTPUT_SPECIES_GROUPS, REPO, SPECIES_GROUPS_TSV  # noqa: E402
+from cosmic_seq.kansasii_paths import MANIFEST_SCRIPT  # noqa: E402
 
 MYCOBACTERIACEAE_TAXID = 1762
 API = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon"
 USER_AGENT = "cosmic-seq/1.0 (python urllib)"
 GROUP_RANKS = ("SPECIES_GROUP", "SPECIES_SUBGROUP")
 RETRIES = 3
-FAMILY = "f__Mycobacteriaceae"
 
 Edges = dict[str, dict[str, Any]]
+
+
+@dataclass
+class Member:
+    group: str
+    label: str
+    species: str
+    source: str  # ncbi | curated
+    group_taxid: str = ""
+    species_taxid: str = ""
+    ncbi_assemblies: str = ""
 
 
 def fetch(url: str) -> dict[str, Any]:
@@ -64,12 +76,12 @@ def subtree(taxid: int, ranks: tuple[str, ...], raw_dir: Path, from_raw: bool) -
     """`edges` of the filtered subtree of a taxon, from the API (answer saved to raw_dir) or from raw_dir."""
     path = raw_dir / f"{taxid}.json"
     if from_raw:
-        data: dict[str, Any] = json.loads(path.read_text())
+        data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     else:
         query = "&".join(f"rank_limits={rank}" for rank in ranks)
         data = fetch(f"{API}/{taxid}/filtered_subtree?{query}")
         part = path.with_suffix(".json.part")
-        part.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n")
+        part.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n", encoding="utf-8")
         part.replace(path)
     edges: Edges = data.get("edges", {})
     if not edges:
@@ -82,42 +94,57 @@ def is_formal(name: str) -> bool:
     return " sp." not in name and " cf." not in name and "'" not in name and '"' not in name
 
 
-def gtdb_by_species_taxid(metadata: Path) -> tuple[dict[str, Counter[str]], dict[str, str]]:
-    """ncbi_species_taxid -> Counter of GTDB species of the family; GTDB species -> its representative accession."""
-    by_taxid: dict[str, Counter[str]] = {}
-    representative: dict[str, str] = {}
-    with metadata.open(newline="") as handle:
-        reader = csv.DictReader(handle, delimiter="\t")
-        for row in reader:
-            taxonomy = row["gtdb_taxonomy"]
-            if FAMILY not in taxonomy:
-                continue
-            species = taxonomy.rsplit(";", 1)[-1].removeprefix("s__")
-            by_taxid.setdefault(row["ncbi_species_taxid"], Counter())[species] += 1
-            if row["gtdb_representative"] == "t":
-                representative[species] = row["accession"][3:]  # without the RS_/GB_ flag of GTDB
-    return by_taxid, representative
+def short_label(group: str) -> str:
+    """Display label of a group without a curated one: "Mycobacterium simiae complex" -> "M. simiae complex"."""
+    genus, _, rest = group.partition(" ")
+    return f"{genus[0]}. {rest}" if rest else group
+
+
+def read_curated(path: Path) -> tuple[dict[str, str], list[tuple[Member, str]]]:
+    """Curated table: group -> label, and the curated species with their note."""
+    labels: dict[str, str] = {}
+    members: list[tuple[Member, str]] = []
+    with path.open(newline="", encoding="utf-8") as handle:
+        for line, row in enumerate(csv.DictReader(handle, delimiter="\t"), start=2):
+            group, label, species = row["group"].strip(), row["label"].strip(), row["species"].strip()
+            if not group or not label:
+                raise ValueError(f"{path}:{line}: group and label are required")
+            if labels.setdefault(group, label) != label:
+                raise ValueError(f"{path}:{line}: group {group!r} has labels {labels[group]!r} and {label!r}")
+            if species:
+                members.append((Member(group, label, species, "curated"), row.get("note") or ""))
+    return labels, members
 
 
 def write_tsv(path: Path, header: list[str], rows: list[list[object]]) -> None:
     part = path.with_suffix(path.suffix + ".part")
-    with part.open("w", newline="") as handle:
+    with part.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
         writer.writerow(header)
         writer.writerows(rows)
     part.replace(path)
 
 
+def write_manifest(out: Path, *inputs: str) -> None:
+    bash = shutil.which("bash")
+    if bash is None or not MANIFEST_SCRIPT.is_file():
+        print(f"warning: no MANIFEST.txt (bash or {MANIFEST_SCRIPT} missing)", file=sys.stderr)
+        return
+    subprocess.run([bash, str(MANIFEST_SCRIPT), str(out), str(REPO), "scripts/04_ncbi_species_groups.py", *inputs],
+                   check=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--family-taxid", type=int, default=MYCOBACTERIACEAE_TAXID)
-    parser.add_argument("--metadata", type=Path, default=GTDB_METADATA_DIR / f"bac120_metadata_r{GTDB_RELEASE}.tsv")
+    parser.add_argument("--curated", type=Path, default=SPECIES_GROUPS_TSV)
     parser.add_argument("--out", type=Path, default=OUTPUT_SPECIES_GROUPS)
     parser.add_argument("--from-raw", action="store_true", help="parse the saved API answers in OUT/raw, no network")
     args = parser.parse_args()
 
     raw_dir = args.out / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
+    labels, curated = read_curated(args.curated)
 
     family = subtree(args.family_taxid, GROUP_RANKS, raw_dir, args.from_raw)
     groups = sorted(((int(taxid), edge) for taxid, edge in family.items() if edge.get("rank") in GROUP_RANKS),
@@ -125,41 +152,54 @@ def main() -> int:
     if not groups:
         raise RuntimeError(f"no {'/'.join(GROUP_RANKS)} node below taxon {args.family_taxid}")
 
-    by_taxid, representative = gtdb_by_species_taxid(args.metadata)
-
-    species_rows: list[list[object]] = []
+    by_species: dict[str, Member] = {}
     group_rows: list[list[object]] = []
     for group_taxid, group in groups:
+        group_name = str(group["scientific_name"])
+        label = labels.get(group_name) or short_label(group_name)
         edges = subtree(group_taxid, ("SPECIES",), raw_dir, args.from_raw)
-        species = sorted(((taxid, edge) for taxid, edge in edges.items() if edge.get("rank") == "SPECIES"),
-                         key=lambda item: str(item[1]["scientific_name"]))
-        gtdb_hit: set[str] = set()
-        for taxid, edge in species:
+        species = [(taxid, edge) for taxid, edge in edges.items() if edge.get("rank") == "SPECIES"]
+        formal = [(taxid, edge) for taxid, edge in species if is_formal(str(edge["scientific_name"]))]
+        for taxid, edge in formal:
             name = str(edge["scientific_name"])
-            gtdb = by_taxid.get(taxid, Counter())
-            ranked = sorted(gtdb.items(), key=lambda item: (-item[1], item[0]))
-            gtdb_hit.update(gtdb)
-            species_rows.append([group_taxid, group["scientific_name"], group["rank"], taxid, name,
-                                 "yes" if is_formal(name) else "no", edge.get("assembly_count", 0), sum(gtdb.values()),
-                                 "; ".join(f"{sp} ({n})" for sp, n in ranked),
-                                 "; ".join(representative.get(sp, "") for sp, _ in ranked)])
-        n_formal = sum(is_formal(str(edge["scientific_name"])) for _, edge in species)
-        n_assembly = sum(bool(edge.get("assembly_count")) for _, edge in species)
-        group_rows.append([group_taxid, group["scientific_name"], group["rank"], len(species), n_formal, n_assembly,
-                           len(gtdb_hit), "; ".join(sorted(gtdb_hit))])
-        print(f"{group['scientific_name']} ({group_taxid}): {len(species)} species, {n_formal} formal, "
-              f"{n_assembly} with assemblies, {len(gtdb_hit)} GTDB species")
+            if name in by_species:
+                raise ValueError(f"{name}: in NCBI groups {by_species[name].group!r} and {group_name!r}")
+            by_species[name] = Member(group_name, label, name, "ncbi", str(group_taxid), taxid,
+                                      str(edge.get("assembly_count", 0)))
+        n_assembly = sum(bool(edge.get("assembly_count")) for _, edge in formal)
+        group_rows.append([group_name, label, "ncbi", group_taxid, len(species), len(formal), n_assembly])
+        print(f"{group_name} ({group_taxid}): {len(species)} species, {len(formal)} formal "
+              f"({len(species) - len(formal)} placeholders left out), {n_assembly} with assemblies")
 
+    ncbi_groups = {str(group["scientific_name"]) for _, group in groups}
+    for group_name in sorted(set(labels) - ncbi_groups - {member.group for member, _ in curated}):
+        print(f"warning: curated label for {group_name!r}, which is no NCBI group and has no curated species",
+              file=sys.stderr)
+
+    curated_counts: dict[str, int] = {}
+    for member, note in curated:
+        known = by_species.get(member.species)
+        if known is not None and (known.source == "curated" or "override" not in note):
+            raise ValueError(f"{member.species}: curated in {member.group!r} but already in {known.group!r} "
+                             f"({known.source}); write `override` in the note to move it")
+        by_species[member.species] = member
+        if member.group not in ncbi_groups:
+            curated_counts[member.group] = curated_counts.get(member.group, 0) + 1
+    for group_name, count in sorted(curated_counts.items()):
+        group_rows.append([group_name, labels[group_name], "curated", "", count, count, ""])
+        print(f"{group_name} (curated): {count} species")
+
+    rows = sorted(by_species.values(), key=lambda m: (m.group, m.species))
     write_tsv(args.out / "species_groups.tsv",
-              ["group_taxid", "group_name", "group_rank", "species_taxid", "species_name", "formal", "ncbi_assemblies",
-               "gtdb_genomes", "gtdb_species", "gtdb_representatives"], species_rows)
+              ["group", "label", "species", "source", "group_taxid", "species_taxid", "ncbi_assemblies"],
+              [[m.group, m.label, m.species, m.source, m.group_taxid, m.species_taxid, m.ncbi_assemblies]
+               for m in rows])
     write_tsv(args.out / "groups.tsv",
-              ["group_taxid", "group_name", "group_rank", "species", "formal_species", "species_with_assemblies",
-               "gtdb_species_count", "gtdb_species"], group_rows)
+              ["group", "label", "source", "group_taxid", "species", "formal_species", "species_with_assemblies"],
+              group_rows)
 
-    subprocess.run(["bash", str(MANIFEST_SCRIPT), str(args.out), str(REPO), "scripts/04_ncbi_species_groups.py",
-                    str(args.metadata), f"{API}/{args.family_taxid}/filtered_subtree"], check=True)
-    print(f"{len(species_rows)} species rows of {len(groups)} groups in {args.out}")
+    write_manifest(args.out, str(args.curated), f"{API}/{args.family_taxid}/filtered_subtree")
+    print(f"{len(rows)} species of {len(group_rows)} groups in {args.out}")
     return 0
 
 

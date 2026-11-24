@@ -3,7 +3,10 @@
 
 1. NCBI Datasets taxonomy API: every SPECIES_GROUP / SPECIES_SUBGROUP node below the family (found, not listed by hand);
 2. for each group, every node of rank SPECIES below it; placeholders ("Mycobacterium sp. ...", "cf.", quoted isolate
-   names) are counted in groups.tsv but left out of species_groups.tsv;
+   names) are counted in groups.tsv but left out of species_groups.tsv. Each SUBSPECIES "G e subsp. s" below it is
+   also listed as species "G s" unless that species exists: NCBI demoted former species to subspecies (M. chimaera,
+   M. yongonense -> M. intracellulare subsp.; M. massiliense, M. bolletii -> M. abscessus subsp.), and old deflines
+   still use the species names;
 3. NCBI taxa of another rank that serve as a complex, named by a `taxid` row of the curated table (genus
    Mycobacteroides, 670516 = the M. chelonae-abscessus complex): their species are collected the same way (source
    ncbi); the node's NCBI name must equal the row's `group`;
@@ -35,7 +38,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: the cosmic_seq package
 
@@ -101,6 +104,16 @@ def is_formal(name: str) -> bool:
     return " sp." not in name and " cf." not in name and "'" not in name and '"' not in name
 
 
+def subspecies_as_species(name: str) -> str | None:
+    """"Mycobacterium intracellulare subsp. chimaera" -> "Mycobacterium chimaera" (canonical genus); None if no subsp."""
+    head, sep, rest = name.partition(" subsp. ")
+    words = rest.split()
+    if not sep or not words:
+        return None
+    genus = canonical_species(head).split()[0]
+    return f"{genus} {words[0]}"
+
+
 def short_label(group: str) -> str:
     """Display label of a group without a curated one: "Mycobacterium simiae complex" -> "M. simiae complex"."""
     genus, _, rest = group.partition(" ")
@@ -132,8 +145,10 @@ def read_curated(path: Path) -> tuple[dict[str, str], list[tuple[Member, str]], 
 
 
 def collect_group(group_taxid: int, group_name: str, label: str, edges: Edges,
-                  by_species: dict[str, Member]) -> list[object]:
-    """Add the formal species below an NCBI taxon to `by_species`; returns the groups.tsv row."""
+                  by_species: dict[str, Member], subspecies_of: Callable[[int], Edges]) -> list[object]:
+    """Add the formal species below an NCBI taxon to `by_species`, and their subspecies under the species name the
+    subspecies epithet makes (`subspecies_as_species`); returns the groups.tsv row. `subspecies_of(taxid)` answers
+    the subtree of a species: the group subtree stops at rank SPECIES."""
     species = [(taxid, edge) for taxid, edge in edges.items() if edge.get("rank") == "SPECIES"]
     formal = [(taxid, edge) for taxid, edge in species if is_formal(str(edge["scientific_name"]))]
     for taxid, edge in formal:
@@ -143,9 +158,26 @@ def collect_group(group_taxid: int, group_name: str, label: str, edges: Edges,
             raise ValueError(f"{name}: in NCBI groups {by_species[name].group!r} and {group_name!r}")
         by_species[name] = Member(group_name, label, name, "ncbi", str(group_taxid), taxid,
                                   str(edge.get("assembly_count", 0)), ncbi_name if ncbi_name != name else "")
+    subspecies: list[tuple[str, Member]] = []
+    for taxid, edge in formal:
+        if edge.get("children_status") == "NO_VISIBLE_CHILDREN":
+            continue
+        for sub_taxid, sub_edge in sorted(subspecies_of(int(taxid)).items()):
+            ncbi_name = str(sub_edge["scientific_name"])
+            name = subspecies_as_species(ncbi_name) if sub_edge.get("rank") == "SUBSPECIES" else None
+            if name is not None and is_formal(ncbi_name) and name != canonical_species(str(edge["scientific_name"])):
+                subspecies.append((name, Member(group_name, label, name, "ncbi", str(group_taxid), sub_taxid,
+                                                str(sub_edge.get("assembly_count", 0)), ncbi_name)))
+    n_subspecies = 0
+    for name, member in subspecies:
+        if name in by_species:
+            continue  # a species of that name (or an earlier subspecies) wins
+        by_species[name] = member
+        n_subspecies += 1
     n_assembly = sum(bool(edge.get("assembly_count")) for _, edge in formal)
     print(f"{group_name} ({group_taxid}): {len(species)} species, {len(formal)} formal "
-          f"({len(species) - len(formal)} placeholders left out), {n_assembly} with assemblies")
+          f"({len(species) - len(formal)} placeholders left out), {n_assembly} with assemblies, "
+          f"{n_subspecies} subspecies listed as species")
     return [group_name, label, "ncbi", group_taxid, len(species), len(formal), n_assembly]
 
 
@@ -168,6 +200,12 @@ def main() -> int:
 
     raw_dir = args.out / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
+    species_raw_dir = raw_dir / "species"  # subtrees of species with children (their subspecies)
+    species_raw_dir.mkdir(exist_ok=True)
+
+    def subspecies_of(taxid: int) -> Edges:
+        return subtree(taxid, ("SUBSPECIES",), species_raw_dir, args.from_raw)
+
     labels, curated, extra_taxa = read_curated(args.curated)
 
     family = subtree(args.family_taxid, GROUP_RANKS, raw_dir, args.from_raw)
@@ -182,7 +220,7 @@ def main() -> int:
         group_name = str(group["scientific_name"])
         label = labels.get(group_name) or short_label(group_name)
         edges = subtree(group_taxid, ("SPECIES",), raw_dir, args.from_raw)
-        group_rows.append(collect_group(group_taxid, group_name, label, edges, by_species))
+        group_rows.append(collect_group(group_taxid, group_name, label, edges, by_species, subspecies_of))
 
     ncbi_groups = {str(group["scientific_name"]) for _, group in groups}
     for taxid, group_name in sorted(extra_taxa.items()):
@@ -192,7 +230,8 @@ def main() -> int:
         node_name = str(edges.get(str(taxid), {}).get("scientific_name", ""))
         if node_name != group_name:
             raise ValueError(f"taxid {taxid} is {node_name!r} in NCBI, not {group_name!r} as in {args.curated}")
-        group_rows.append(collect_group(taxid, group_name, labels[group_name], edges, by_species))
+        group_rows.append(collect_group(taxid, group_name, labels[group_name], edges, by_species,
+                                        subspecies_of))
         ncbi_groups.add(group_name)
     for group_name in sorted(set(labels) - ncbi_groups - {member.group for member, _ in curated}):
         print(f"warning: curated label for {group_name!r}, which is no NCBI group and has no curated species",

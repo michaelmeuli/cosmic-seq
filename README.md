@@ -59,6 +59,12 @@ these are the M. tuberculosis complex, the M. avium complex, the M. simiae compl
 kansasii, abscessus, fortuitum or terrae complex. NCBI "species" include placeholders (`Mycobacterium sp. ...`, `cf.`,
 quoted isolate names, mostly without assemblies); they are counted in `groups.tsv` but left out of `species_groups.tsv`.
 
+NCBI has demoted several former species to subspecies (*M. intracellulare* subsp. *chimaera* / *yongonense*,
+*M. avium* subsp. *paratuberculosis*, *M. abscessus* subsp. *massiliense* / *bolletii*, ...), and old deflines still use
+the species names. So for every formal species with children, step 4 also fetches its subspecies
+(`rank_limits=SUBSPECIES`, answers in `raw/species/`) and lists each "G e subsp. s" as species "G s" of the same group
+(`ncbi_name` keeps the subspecies name), unless a species of that name exists.
+
 The curated `species_groups.tsv` of the repo (`group, label, species, taxid, note`) gives each group its display label
 and adds what the NCBI groups lack:
 
@@ -68,9 +74,8 @@ and adds what the NCBI groups lack:
   (taxid 670516: abscessus, chelonae, franklinii, immunogenum, salmoniphilum, saopaulense, stephanolepidis,
   `[Mycobacterium] fukienense`, `[Mycobacterium] runyonii`). The script checks that the NCBI name of the taxid equals
   `group`;
-- a row with a `species` adds it by hand: the M. kansasii complex (not in NCBI), and *M. bolletii* / *M. massiliense*
-  (NCBI subspecies of abscessus, still species names in old deflines) in group *Mycobacteroides*. A curated species that
-  is also in an NCBI group stops the script unless its note says `override`.
+- a row with a `species` adds it by hand: the M. kansasii complex (not in NCBI). A curated species that is also in an
+  NCBI group (subspecies names included) stops the script unless its note says `override`.
 
 Species are written with the genus as GTDB has it: GTDB keeps one genus *Mycobacterium*, while NCBI uses the 2018
 split genera (*Mycobacteroides*, *Mycolicibacterium*, *Mycolicibacter*, *Mycolicibacillus*) and some deflines write

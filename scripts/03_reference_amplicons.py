@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Reference sequences of the Sanger amplicons: in-silico PCR of every primer pair on the GTDB species representatives.
 
-Input: `primers.tsv` / `amplicons.tsv` (checked by 02), the representative list of 01 and the genomes in the shared
-NCBI dataset directory. For each genome and primer pair every product with at most --max-mismatches substitutions
+Input: `primers.tsv` / `amplicons.tsv` (checked by 02), the representative list of 01, the curated
+`extra_genomes.tsv` (genomes of taxa GTDB merges into another species, e.g. the M. abscessus subspecies; the label is
+used as species) and the genomes in the shared NCBI dataset directory. For each genome and primer pair every product with at most --max-mismatches substitutions
 per primer and at most --max-product bp is found; of these the products with the fewest mismatches are kept
 (copies of rRNA operons tie; weaker products are paralogs or unrelated loci). Sequences run from the forward
 primer to the reverse primer, primers included.
@@ -30,7 +31,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: the cosmic_seq package
 
-from cosmic_seq import AMPLICONS_TSV, OUTPUT_REFERENCES, PRIMERS_TSV, REPO, REPRESENTATIVES_TSV  # noqa: E402
+from cosmic_seq import AMPLICONS_TSV, EXTRA_GENOMES_TSV, OUTPUT_REFERENCES, PRIMERS_TSV, REPO, REPRESENTATIVES_TSV  # noqa: E402
+from cosmic_seq.genomes import load_genomes  # noqa: E402
 from cosmic_seq.insilico import MAX_MISMATCHES, MAX_PRODUCT  # noqa: E402
 from cosmic_seq.kansasii_paths import MANIFEST_SCRIPT, NCBI_DATASET  # noqa: E402
 from cosmic_seq.tables import Amplicon, Primer, genome_fasta, genome_products, load_amplicons, load_primers  # noqa: E402
@@ -83,8 +85,10 @@ def main() -> int:
     parser.add_argument("--primers", type=Path, default=PRIMERS_TSV)
     parser.add_argument("--amplicons", type=Path, default=AMPLICONS_TSV)
     parser.add_argument("--representatives", type=Path, default=REPRESENTATIVES_TSV, help="accession, genus, species (01)")
+    parser.add_argument("--extra", type=Path, default=EXTRA_GENOMES_TSV,
+                        help="curated genomes added to the representatives (accession, label, reason); label = species")
     parser.add_argument("--genomes", type=Path, default=NCBI_DATASET, help="directory with <accession>/*_genomic.fna")
-    parser.add_argument("--accession", nargs="+", help="only these accessions of the representative list")
+    parser.add_argument("--accession", nargs="+", help="only these accessions of the representative list or extra_genomes.tsv")
     parser.add_argument("--limit", type=int, help="only the first N genomes (test runs)")
     parser.add_argument("--max-mismatches", type=int, default=MAX_MISMATCHES, help="substitutions allowed per primer")
     parser.add_argument("--max-product", type=int, default=MAX_PRODUCT, help="longest product (bp)")
@@ -95,12 +99,11 @@ def main() -> int:
 
     primers = load_primers(args.primers)
     amplicons = load_amplicons(args.amplicons, primers)
-    with args.representatives.open(newline="") as handle:
-        genomes = list(csv.DictReader(handle, delimiter="\t"))
+    genomes = load_genomes(args.representatives, args.extra)
     if args.accession:
         unknown = sorted(set(args.accession) - {g["accession"] for g in genomes})
         if unknown:
-            parser.error(f"not in {args.representatives.name}: {', '.join(unknown)}")
+            parser.error(f"not in {args.representatives.name} or {args.extra.name}: {', '.join(unknown)}")
         genomes = [g for g in genomes if g["accession"] in set(args.accession)]
     if args.limit:
         genomes = genomes[:args.limit]
@@ -179,7 +182,7 @@ def main() -> int:
         writer.writerows([g["accession"], g["genus"], g["species"]] for g in missing)
 
     subprocess.run(["bash", str(MANIFEST_SCRIPT), str(args.out), str(REPO), "scripts/03_reference_amplicons.py",
-                    str(args.primers), str(args.amplicons), str(args.representatives), str(args.genomes)], check=True)
+                    str(args.primers), str(args.amplicons), str(args.representatives), str(args.extra), str(args.genomes)], check=True)
     print(f"{sum(len(rows) for rows in by_amplicon.values())} reference sequences of {len(amplicons)} amplicons in {fasta_dir}")
     return 0
 

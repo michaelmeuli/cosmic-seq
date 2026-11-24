@@ -36,7 +36,10 @@ Step 1 follows `immensekansasii/scripts/01_gtdb_mycobacteria_genomes.sh` and fil
 genomes downloaded for the kansasii project are reused. A genome counts as present when its directory holds a non-empty
 `*_genomic.fna`. Accessions that NCBI no longer delivers are written to `unavailable_accessions.txt` and not requested
 again (`--retry-unavailable` asks once more; `--dry-run` only reports). Step 3 uses the GTDB species representatives
-(`gtdb_representative == t`): 1,812 genomes, one per species.
+(`gtdb_representative == t`): 1,812 genomes, one per species. Taxa that GTDB merges into another species are added by hand in
+`extra_genomes.tsv` (accession, label, reason; the label is written as species): the type strains of *M. abscessus*
+subsp. *bolletii* and subsp. *massiliense* (GTDB r232 has one *M. abscessus*, represented by ATCC 19977 = subsp.
+*abscessus*).
 
 The GTDB family Mycobacteriaceae is wider than the genus: 850 of the representatives are *Mycobacterium* (which in GTDB
 includes *Mycobacteroides*, *Mycolicibacterium* and the other split genera); the rest are *Corynebacterium*, *Nocardia*,

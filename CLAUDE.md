@@ -20,6 +20,8 @@ See README.md. Easy to get wrong:
   (`cosmic_seq/names.py` maps Mycobacteroides etc.; keep its synonym list in sync with cosmic-files
   `MYCOBACTERIUM_SYNONYMS`). One group per species: the output is the species -> group lookup of cosmic-files; a curated
   species already in an NCBI group needs `override` in its note.
+- Step 3 runs the GTDB representatives **plus** the curated `extra_genomes.tsv` (taxa GTDB merges, e.g. the
+  M. abscessus subspecies bolletii / massiliense; label = species in the FASTA). Add genomes there, not to the representatives.
 - **Environment:** `env_cosmic` (`environment.yml`). Run step 3 through `sbatch submit_references.sbatch`, not on the login node.
 - **Type check:** `~/data/conda/envs/env_typecheck/bin/mypy` (strict).
 - **Outputs** go to `output/cosmic-seq/results/` on the shares, not the repo.

@@ -1,6 +1,6 @@
 # Primers of the mycobacterial Sanger assays
 
-Written by `scripts/02_handbook_primers.py` on 2026-11-16 from `primers.tsv` and `amplicons.tsv`. Do not edit by hand.
+Written by `scripts/02_handbook_primers.py` on 2026-11-24 from `primers.tsv` and `amplicons.tsv`. Do not edit by hand.
 
 Source: 38 protocols in `data/Arbeitshandbücher` (25 chapters of the molecular handbook, 13 research protocols kept outside it, protocol `NZM <n>`). Every sequence below was found in the text of its protocol by the script.
 
